@@ -195,6 +195,37 @@ pub struct Texture2d(RenderResourceHandle);
 
 impl Texture2d {
     #[spirv_std_macros::gpu_only]
+    pub fn load<V: Vector<f32, 4>>(self, pix: impl Vector<i32, 2>) -> V {
+        unsafe {
+            let mut result = Default::default();
+            asm!(
+                "OpExtension \"SPV_EXT_descriptor_indexing\"",
+                "OpCapability RuntimeDescriptorArray",
+                "OpDecorate %image_2d_var DescriptorSet 1",
+                "OpDecorate %image_2d_var Binding 4",
+                "%float                 = OpTypeFloat 32",
+                "%image_2d              = OpTypeImage %float Dim2D 0 0 0 1 Rgba8",
+                "%image_array           = OpTypeRuntimeArray %image_2d",
+                "%ptr_image_array       = OpTypePointer Generic %image_array",
+                "%image_2d_var          = OpVariable %ptr_image_array UniformConstant",
+                "%ptr_image_2d          = OpTypePointer Generic %image_2d",
+                "", // ^^ type preamble
+                "%pixel                 = OpLoad _ {0}",
+                "%offset                = OpLoad _ {1}",
+                "%v4float               = OpTypeVector %float 4",
+                "%24                    = OpAccessChain %ptr_image_2d %image_2d_var %offset",
+                "%25                    = OpLoad %image_2d %24",
+                "%result                = OpImageFetch %v4float %25 %pixel",
+                "OpStore {2} %result",
+                     in(reg) &pix,
+                     in(reg) &self.0.index(),
+                     in(reg) &mut result,
+            );
+            result
+        }
+    }
+
+    #[spirv_std_macros::gpu_only]
     pub fn sample<V: Vector<f32, 4>>(self, coord: impl Vector<f32, 2>) -> V {
         // jb-todo: also do a bindless fetch of the sampler
         unsafe {
