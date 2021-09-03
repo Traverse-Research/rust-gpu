@@ -1,5 +1,5 @@
 use super::Builder;
-use crate::builder_spirv::{BuilderCursor, SpirvValue};
+use crate::builder_spirv::{BuilderCursor, SpirvValue, SpirvValueExt};
 use crate::codegen_cx::CodegenCx;
 use crate::spirv_type::SpirvType;
 use rspirv::dr;
@@ -246,6 +246,11 @@ impl<'cx, 'tcx> Builder<'cx, 'tcx> {
     ) {
         // Types declared must be registered in our type system.
         let new_result_id = match inst.class.opcode {
+            Op::Constant => {
+                let mut emit = self.emit();
+                emit.module_mut().types_global_values.push(inst.clone());
+                inst.result_id.unwrap()
+            }
             Op::TypeVoid => SpirvType::Void.def(self.span(), self),
             Op::TypeBool => SpirvType::Bool.def(self.span(), self),
             Op::TypeInt => SpirvType::Integer(
@@ -270,9 +275,23 @@ impl<'cx, 'tcx> Builder<'cx, 'tcx> {
             }
             .def(self.span(), self),
             Op::TypeArray => {
-                self.err("OpTypeArray in asm! is not supported yet");
-                return;
+                let count = inst.operands[1].unwrap_id_ref();
+                let emit = self.emit();
+                let count_ty = emit
+                    .module_ref()
+                    .types_global_values
+                    .iter()
+                    .find(|i| i.result_id == Some(count))
+                    .unwrap()
+                    .result_type
+                    .unwrap();
+
+                SpirvType::Array {
+                    count: count.with_type(count_ty),
+                    element: inst.operands[0].unwrap_id_ref(),
+                }
             }
+            .def(self.span(), self),
             Op::TypeRuntimeArray => SpirvType::RuntimeArray {
                 element: inst.operands[0].unwrap_id_ref(),
             }
