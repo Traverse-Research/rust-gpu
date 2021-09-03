@@ -189,6 +189,14 @@ impl<T> ArrayBuffer<T> {
 #[repr(transparent)]
 pub struct Texture2d(RenderResourceHandle);
 
+#[repr(i32)]
+pub enum Sampler {
+    MinMagMipPointWrap = 0,
+    MinMagMipPointClamp = 1,
+    MinMagMipLinearWrap = 2,
+    MinMagMipLinearClamp = 3,
+}
+
 // #[derive(Copy, Clone)]
 // #[repr(transparent)]
 // struct SamplerState(RenderResourceHandle);
@@ -204,7 +212,7 @@ impl Texture2d {
                 "OpDecorate %image_2d_var DescriptorSet 1",
                 "OpDecorate %image_2d_var Binding 4",
                 "%float                 = OpTypeFloat 32",
-                "%image_2d              = OpTypeImage %float Dim2D 0 0 0 1 Rgba8",
+                "%image_2d              = OpTypeImage %float Dim2D 0 0 0 1 Unknown",
                 "%image_array           = OpTypeRuntimeArray %image_2d",
                 "%ptr_image_array       = OpTypePointer Generic %image_array",
                 "%image_2d_var          = OpVariable %ptr_image_array UniformConstant",
@@ -226,7 +234,7 @@ impl Texture2d {
     }
 
     #[spirv_std_macros::gpu_only]
-    pub fn sample<V: Vector<f32, 4>>(self, coord: impl Vector<f32, 2>) -> V {
+    pub fn sample<V: Vector<f32, 4>>(self, coord: impl Vector<f32, 2>, sampler: Sampler) -> V {
         // jb-todo: also do a bindless fetch of the sampler
         unsafe {
             let mut result = Default::default();
@@ -234,24 +242,37 @@ impl Texture2d {
                 "OpExtension \"SPV_EXT_descriptor_indexing\"",
                 "OpCapability RuntimeDescriptorArray",
                 "OpDecorate %image_2d_var DescriptorSet 1",
-                "OpDecorate %image_2d_var Binding 0",
+                "OpDecorate %image_2d_var Binding 4",
+                "OpDecorate %sampler_var DescriptorSet 1",
+                "OpDecorate %sampler_var Binding 0",
                 "%uint                  = OpTypeInt 32 0",
                 "%float                 = OpTypeFloat 32",
                 "%image_2d              = OpTypeImage %float Dim2D 0 0 0 1 Unknown",
-                "%sampled_image_2d      = OpTypeSampledImage %image_2d",
-                "%image_array           = OpTypeRuntimeArray %sampled_image_2d",
+                "%type_sampled_image    = OpTypeSampledImage %image_2d",
+                "%uint_4 = OpConstant %uint 4",
+                "%image_array           = OpTypeRuntimeArray %image_2d",
                 "%ptr_image_array       = OpTypePointer Generic %image_array",
                 "%image_2d_var          = OpVariable %ptr_image_array UniformConstant",
-                "%ptr_sampled_image_2d  = OpTypePointer Generic %sampled_image_2d",
-                "", // ^^ type preamble
+                "%ptr_image_2d          = OpTypePointer Generic %image_2d",
+                "%type_sampler          = OpTypeSampler",
+                "%_arr_type_sampler_uint_4      = OpTypeArray %type_sampler %uint_4",
+                "%_ptr_arr_type_sampler_uint_4  = OpTypePointer Generic %_arr_type_sampler_uint_4",
+                "%sampler_var                   = OpVariable %_ptr_arr_type_sampler_uint_4 UniformConstant",
+                "%_ptr_type_sampler             = OpTypePointer Generic %type_sampler",
+                "%sampler_index                 = OpLoad _ {2}",
+                "%32                            = OpAccessChain %_ptr_type_sampler %sampler_var %sampler_index",
+                "%sampler                       = OpLoad %type_sampler %32",
                 "%offset                = OpLoad _ {1}",
-                "%24                    = OpAccessChain %ptr_sampled_image_2d %image_2d_var %offset",
-                "%25                    = OpLoad %sampled_image_2d %24",
+                "%24                    = OpAccessChain %ptr_image_2d %image_2d_var %offset",
+                "%image                    = OpLoad %image_2d %24",
+                "%35 = OpSampledImage %type_sampled_image %image %sampler",
                 "%coord                 = OpLoad _ {0}",
-                "%result                = OpImageSampleImplicitLod _ %25 %coord",
-                "OpStore {2} %result",
+                "%result                = OpImageSampleImplicitLod _ %35 %coord",
+                "OpStore {3} %result",
+
                 in(reg) &coord,
                 in(reg) &self.0.index(),
+                in(reg) &sampler,
                 in(reg) &mut result,
             );
             result
