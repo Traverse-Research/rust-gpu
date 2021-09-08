@@ -1,9 +1,9 @@
 use super::Builder;
-use crate::builder_spirv::{SpirvValue, SpirvValueExt};
+use crate::builder_spirv::{AtomicOp, SpirvValue, SpirvValueExt};
 use crate::codegen_cx::BindlessDescriptorSets;
 use crate::rustc_codegen_ssa::traits::BuilderMethods;
 use crate::spirv_type::SpirvType;
-use rspirv::spirv::Word;
+use rspirv::spirv::{MemorySemantics, Scope, Word};
 use rustc_target::abi::Align;
 use std::convert::TryInto;
 
@@ -212,6 +212,97 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                 err.note(&format!("signed: `{:?}`", signed));
                 err.emit();
             }
+        }
+    }
+
+    pub(crate) fn codegen_internal_buffer_atomic_uint_op(
+        &mut self,
+        result_type: Word,
+        args: &[SpirvValue],
+        op: AtomicOp,
+    ) -> SpirvValue {
+        if !self.bindless() {
+            self.fatal("Need to run the compiler with -Ctarget-feature=+bindless to be able to use the bindless features");
+        }
+
+        let uint_ty = SpirvType::Integer(32, false).def(rustc_span::DUMMY_SP, self);
+
+        let uniform_uint_ptr =
+            SpirvType::Pointer { pointee: uint_ty }.def(rustc_span::DUMMY_SP, self);
+
+        let zero = self.constant_int(uint_ty, 0).def(self);
+        let two = self.constant_int(uint_ty, 2).def(self);
+
+        let offset_arg = args[1].def(self);
+        let atomic_add_value = args[2].def(self);
+
+        let element_offset = self
+            .emit()
+            .shift_right_arithmetic(uint_ty, None, offset_arg, two)
+            .unwrap();
+
+        let bindless_idx = args[0].def(self);
+
+        let sets = self.bindless_descriptor_sets.borrow().unwrap();
+        let indices = [bindless_idx, zero, element_offset];
+
+        let access_chain = self
+            .emit()
+            .access_chain(uniform_uint_ptr, None, sets.buffers, indices)
+            .unwrap();
+
+        let memory = self
+            .constant_u32(self.span(), Scope::Device as u32)
+            .def(self);
+
+        let semantics = self
+            .constant_u32(
+                self.span(),
+                (MemorySemantics::MAKE_VISIBLE
+                    | MemorySemantics::MAKE_AVAILABLE
+                    | MemorySemantics::ACQUIRE_RELEASE
+                    | MemorySemantics::UNIFORM_MEMORY)
+                    .bits(),
+            )
+            .def(self);
+
+        match op {
+            AtomicOp::Add => self
+                .emit()
+                .atomic_i_add(
+                    dbg!(result_type),
+                    None,
+                    access_chain,
+                    memory,
+                    semantics,
+                    atomic_add_value,
+                )
+                .unwrap()
+                .with_type(dbg!(uniform_uint_ptr)),
+            AtomicOp::Or => self
+                .emit()
+                .atomic_or(
+                    result_type,
+                    None,
+                    access_chain,
+                    memory,
+                    semantics,
+                    atomic_add_value,
+                )
+                .unwrap()
+                .with_type(uniform_uint_ptr),
+            AtomicOp::Exchange => self
+                .emit()
+                .atomic_exchange(
+                    result_type,
+                    None,
+                    access_chain,
+                    memory,
+                    semantics,
+                    atomic_add_value,
+                )
+                .unwrap()
+                .with_type(uniform_uint_ptr),
         }
     }
 

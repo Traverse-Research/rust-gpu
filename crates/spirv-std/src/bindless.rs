@@ -113,6 +113,36 @@ mod internal {
         unimplemented!()
     } // actually implemented in the compiler
 
+    #[spirv(internal_atomic_i_add)]
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn internal_buffer_atomic_add(
+        _buffer: u32,
+        _u32_offset: u32,
+        _count: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+
+    #[spirv(internal_atomic_or)]
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn internal_buffer_atomic_or(
+        _buffer: u32,
+        _u32_offset: u32,
+        _value: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+
+    #[spirv(internal_atomic_exchange)]
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn internal_buffer_atomic_exchange(
+        _buffer: u32,
+        _u32_offset: u32,
+        _value: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+
     #[spirv(internal_buffer_store)]
     #[spirv_std_macros::gpu_only]
     pub unsafe extern "unadjusted" fn internal_buffer_store<T>(
@@ -142,6 +172,21 @@ impl Buffer {
         // assert!(self.0.tag() == RenderResourceTag::Buffer);
 
         internal::internal_buffer_store(self.0.index(), dword_aligned_byte_offset, value)
+    }
+
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn atomic_add_u32(self, u32_offset: u32, count: u32) -> u32 {
+        unsafe { internal::internal_buffer_atomic_add(self.0.index(), u32_offset, count) }
+    }
+
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn atomic_or_u32(self, u32_offset: u32, value: u32) -> u32 {
+        unsafe { internal::internal_buffer_atomic_or(self.0.index(), u32_offset, value) }
+    }
+
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn atomic_exchange_u32(self, u32_offset: u32, value: u32) -> u32 {
+        unsafe { internal::internal_buffer_atomic_exchange(self.0.index(), u32_offset, value) }
     }
 }
 
@@ -225,9 +270,9 @@ impl Texture2d {
                 "%25                    = OpLoad %image_2d %24",
                 "%result                = OpImageFetch %v4float %25 %pixel",
                 "OpStore {2} %result",
-                     in(reg) &pix,
-                     in(reg) &self.0.index(),
-                     in(reg) &mut result,
+                in(reg) &pix,
+                in(reg) &self.0.index(),
+                in(reg) &mut result,
             );
             result
         }

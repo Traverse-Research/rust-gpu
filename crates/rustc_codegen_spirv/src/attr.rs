@@ -91,6 +91,9 @@ pub enum SpirvAttribute {
     UnrollLoops,
     InternalBufferLoad,
     InternalBufferStore,
+    InternalBufferAtomicIAdd,
+    InternalBufferAtomicOr,
+    InternalBufferAtomicExchange,
 }
 
 // HACK(eddyb) this is similar to `rustc_span::Spanned` but with `value` as the
@@ -126,6 +129,9 @@ pub struct AggregatedSpirvAttributes {
     pub unroll_loops: Option<Spanned<()>>,
     pub internal_buffer_load: Option<Spanned<()>>,
     pub internal_buffer_store: Option<Spanned<()>>,
+    pub internal_buffer_atomic_i_add: Option<Spanned<()>>,
+    pub internal_buffer_atomic_or: Option<Spanned<()>>,
+    pub internal_buffer_atomic_exchange: Option<Spanned<()>>,
 }
 
 struct MultipleAttrs {
@@ -224,6 +230,24 @@ impl AggregatedSpirvAttributes {
                 (),
                 span,
                 "#[spirv(internal_buffer_store)]",
+            ),
+            InternalBufferAtomicIAdd => try_insert(
+                &mut self.internal_buffer_atomic_i_add,
+                (),
+                span,
+                "#[spirv(internal_atomic_i_add)]",
+            ),
+            InternalBufferAtomicOr => try_insert(
+                &mut self.internal_buffer_atomic_or,
+                (),
+                span,
+                "#[spirv(internal_atomic_or)]",
+            ),
+            InternalBufferAtomicExchange => try_insert(
+                &mut self.internal_buffer_atomic_exchange,
+                (),
+                span,
+                "#[spirv(internal_atomic_exchange)]",
             ),
         }
     }
@@ -351,6 +375,9 @@ impl CheckSpirvAttrVisitor<'_> {
                 },
                 SpirvAttribute::InternalBufferLoad
                 | SpirvAttribute::InternalBufferStore
+                | SpirvAttribute::InternalBufferAtomicIAdd
+                | SpirvAttribute::InternalBufferAtomicOr
+                | SpirvAttribute::InternalBufferAtomicExchange
                 | SpirvAttribute::UnrollLoops => match target {
                     Target::Fn
                     | Target::Closure

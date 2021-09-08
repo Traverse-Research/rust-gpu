@@ -15,6 +15,14 @@ use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 use std::{fs::File, io::Write, path::Path};
 
+// used for codegen_internal_buffer_atomic_uint_op
+// hacked in atomics, will probably be removed at some point
+pub(crate) enum AtomicOp {
+    Add,
+    Or,
+    Exchange,
+}
+
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum SpirvValueKind {
     Def(Word),
@@ -373,6 +381,11 @@ impl BuilderSpirv {
         if target.is_kernel() {
             add_cap(&mut builder, &mut enabled_capabilities, Capability::Kernel);
         } else {
+            add_cap(
+                &mut builder,
+                &mut &mut enabled_capabilities,
+                Capability::VulkanMemoryModelDeviceScope,
+            );
             add_cap(&mut builder, &mut enabled_capabilities, Capability::Shader);
             if memory_model == MemoryModel::Vulkan {
                 if version < (1, 5) {

@@ -1,5 +1,7 @@
 use super::Builder;
-use crate::builder_spirv::{BuilderCursor, SpirvConst, SpirvValue, SpirvValueExt, SpirvValueKind};
+use crate::builder_spirv::{
+    AtomicOp, BuilderCursor, SpirvConst, SpirvValue, SpirvValueExt, SpirvValueKind,
+};
 use crate::spirv_type::SpirvType;
 use rspirv::dr::{InsertPoint, Instruction, Operand};
 use rspirv::spirv::{Capability, MemoryModel, MemorySemantics, Op, Scope, StorageClass, Word};
@@ -2194,6 +2196,24 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
                 kind: SpirvValueKind::IllegalTypeUsed(void_ty),
                 ty: void_ty,
             }
+        } else if self
+            .internal_buffer_atomic_i_add_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_buffer_atomic_uint_op(result_type, args, AtomicOp::Add)
+        } else if self
+            .internal_buffer_atomic_or_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_buffer_atomic_uint_op(result_type, args, AtomicOp::Or)
+        } else if self
+            .internal_buffer_atomic_exchange_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_buffer_atomic_uint_op(result_type, args, AtomicOp::Exchange)
         } else {
             let args = args.iter().map(|arg| arg.def(self)).collect::<Vec<_>>();
             self.emit()
