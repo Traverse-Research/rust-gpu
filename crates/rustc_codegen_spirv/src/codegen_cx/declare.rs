@@ -140,6 +140,19 @@ impl<'tcx> CodegenCx<'tcx> {
                 .borrow_mut()
                 .insert(fn_id);
         }
+        if attrs.internal_uint_atomic_i_add.is_some() {
+            self.internal_uint_atomic_i_add_id
+                .borrow_mut()
+                .insert(fn_id);
+        }
+        if attrs.internal_uint_atomic_or.is_some() {
+            self.internal_uint_atomic_or_id.borrow_mut().insert(fn_id);
+        }
+        if attrs.internal_uint_atomic_exchange.is_some() {
+            self.internal_uint_atomic_exchange_id
+                .borrow_mut()
+                .insert(fn_id);
+        }
 
         let instance_def_id = instance.def_id();
 
@@ -201,6 +214,7 @@ impl<'tcx> CodegenCx<'tcx> {
             .emit_global()
             .variable(ptr_ty, None, StorageClass::Private, None)
             .with_type(ptr_ty);
+
         // TODO: These should be StorageClass::Private, so just zombie for now.
         self.zombie_with_span(result.def_cx(self), span, "Globals are not supported yet");
         result

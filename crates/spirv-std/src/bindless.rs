@@ -113,17 +113,17 @@ mod internal {
         unimplemented!()
     } // actually implemented in the compiler
 
-    #[spirv(internal_atomic_i_add)]
+    #[spirv(internal_buffer_atomic_i_add)]
     #[spirv_std_macros::gpu_only]
     pub extern "unadjusted" fn internal_buffer_atomic_add(
         _buffer: u32,
         _u32_offset: u32,
-        _count: u32,
+        _value: u32,
     ) -> u32 {
         unimplemented!()
     } // actually implemented in the compiler
 
-    #[spirv(internal_atomic_or)]
+    #[spirv(internal_buffer_atomic_or)]
     #[spirv_std_macros::gpu_only]
     pub extern "unadjusted" fn internal_buffer_atomic_or(
         _buffer: u32,
@@ -133,7 +133,7 @@ mod internal {
         unimplemented!()
     } // actually implemented in the compiler
 
-    #[spirv(internal_atomic_exchange)]
+    #[spirv(internal_buffer_atomic_exchange)]
     #[spirv_std_macros::gpu_only]
     pub extern "unadjusted" fn internal_buffer_atomic_exchange(
         _buffer: u32,
@@ -152,6 +152,51 @@ mod internal {
     ) {
         unimplemented!()
     } // actually implemented in the compiler
+
+    #[spirv(internal_uint_atomic_i_add)]
+    #[spirv_std_macros::gpu_only]
+    pub unsafe extern "unadjusted" fn internal_atomic_add(
+        _op_var: &crate::bindless::AtomicU32,
+        _value: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+
+    #[spirv(internal_uint_atomic_or)]
+    #[spirv_std_macros::gpu_only]
+    pub unsafe extern "unadjusted" fn internal_atomic_or(
+        _op_var: &crate::bindless::AtomicU32,
+        _value: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+
+    #[spirv(internal_uint_atomic_exchange)]
+    #[spirv_std_macros::gpu_only]
+    pub unsafe extern "unadjusted" fn internal_atomic_exchange(
+        _op_var: &crate::bindless::AtomicU32,
+        _value: u32,
+    ) -> u32 {
+        unimplemented!()
+    } // actually implemented in the compiler
+}
+
+#[derive(Copy, Clone)]
+#[repr(transparent)]
+pub struct AtomicU32 {
+    _u32: u32,
+}
+
+impl AtomicU32 {
+    pub fn atomic_add(&self, value: u32) -> u32 {
+        unsafe { internal::internal_atomic_add(self, value) }
+    }
+    pub fn atomic_or(&self, value: u32) -> u32 {
+        unsafe { internal::internal_atomic_or(self, value) }
+    }
+    pub fn atomic_exchange(&self, value: u32) -> u32 {
+        unsafe { internal::internal_atomic_exchange(self, value) }
+    }
 }
 
 impl Buffer {
@@ -175,8 +220,8 @@ impl Buffer {
     }
 
     #[spirv_std_macros::gpu_only]
-    pub extern "unadjusted" fn atomic_add_u32(self, u32_offset: u32, count: u32) -> u32 {
-        unsafe { internal::internal_buffer_atomic_add(self.0.index(), u32_offset, count) }
+    pub extern "unadjusted" fn atomic_add_u32(self, u32_offset: u32, value: u32) -> u32 {
+        unsafe { internal::internal_buffer_atomic_add(self.0.index(), u32_offset, value) }
     }
 
     #[spirv_std_macros::gpu_only]
@@ -241,10 +286,6 @@ pub enum Sampler {
     MinMagMipLinearWrap = 2,
     MinMagMipLinearClamp = 3,
 }
-
-// #[derive(Copy, Clone)]
-// #[repr(transparent)]
-// struct SamplerState(RenderResourceHandle);
 
 impl Texture2d {
     #[spirv_std_macros::gpu_only]

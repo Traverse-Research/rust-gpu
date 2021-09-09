@@ -79,6 +79,9 @@ pub struct CodegenCx<'tcx> {
     pub internal_buffer_atomic_i_add_id: RefCell<FxHashSet<Word>>,
     pub internal_buffer_atomic_or_id: RefCell<FxHashSet<Word>>,
     pub internal_buffer_atomic_exchange_id: RefCell<FxHashSet<Word>>,
+    pub internal_uint_atomic_i_add_id: RefCell<FxHashSet<Word>>,
+    pub internal_uint_atomic_or_id: RefCell<FxHashSet<Word>>,
+    pub internal_uint_atomic_exchange_id: RefCell<FxHashSet<Word>>,
     /// Builtin bounds-checking panics (from MIR `Assert`s) call `#[lang = "panic_bounds_check"]`.
     pub panic_bounds_check_fn_id: Cell<Option<Word>>,
 
@@ -153,6 +156,9 @@ impl<'tcx> CodegenCx<'tcx> {
             internal_buffer_atomic_i_add_id: Default::default(),
             internal_buffer_atomic_exchange_id: Default::default(),
             internal_buffer_atomic_or_id: Default::default(),
+            internal_uint_atomic_i_add_id: Default::default(),
+            internal_uint_atomic_or_id: Default::default(),
+            internal_uint_atomic_exchange_id: Default::default(),
             panic_bounds_check_fn_id: Default::default(),
             i8_i16_atomics_allowed: false,
             codegen_args,

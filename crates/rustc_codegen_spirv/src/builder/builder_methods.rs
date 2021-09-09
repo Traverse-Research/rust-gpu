@@ -2214,6 +2214,24 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
             .contains(&callee_val)
         {
             self.codegen_internal_buffer_atomic_uint_op(result_type, args, AtomicOp::Exchange)
+        } else if self
+            .internal_uint_atomic_i_add_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_workgroup_atomic_uint_op(result_type, args, AtomicOp::Add)
+        } else if self
+            .internal_uint_atomic_or_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_workgroup_atomic_uint_op(result_type, args, AtomicOp::Or)
+        } else if self
+            .internal_uint_atomic_exchange_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_workgroup_atomic_uint_op(result_type, args, AtomicOp::Exchange)
         } else {
             let args = args.iter().map(|arg| arg.def(self)).collect::<Vec<_>>();
             self.emit()

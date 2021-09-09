@@ -94,6 +94,9 @@ pub enum SpirvAttribute {
     InternalBufferAtomicIAdd,
     InternalBufferAtomicOr,
     InternalBufferAtomicExchange,
+    InternalUintAtomicIAdd,
+    InternalUintAtomicOr,
+    InternalUintAtomicExchange,
 }
 
 // HACK(eddyb) this is similar to `rustc_span::Spanned` but with `value` as the
@@ -132,6 +135,9 @@ pub struct AggregatedSpirvAttributes {
     pub internal_buffer_atomic_i_add: Option<Spanned<()>>,
     pub internal_buffer_atomic_or: Option<Spanned<()>>,
     pub internal_buffer_atomic_exchange: Option<Spanned<()>>,
+    pub internal_uint_atomic_i_add: Option<Spanned<()>>,
+    pub internal_uint_atomic_or: Option<Spanned<()>>,
+    pub internal_uint_atomic_exchange: Option<Spanned<()>>,
 }
 
 struct MultipleAttrs {
@@ -235,19 +241,37 @@ impl AggregatedSpirvAttributes {
                 &mut self.internal_buffer_atomic_i_add,
                 (),
                 span,
-                "#[spirv(internal_atomic_i_add)]",
+                "#[spirv(internal_buffer_atomic_i_add)]",
             ),
             InternalBufferAtomicOr => try_insert(
                 &mut self.internal_buffer_atomic_or,
                 (),
                 span,
-                "#[spirv(internal_atomic_or)]",
+                "#[spirv(internal_buffer_atomic_or)]",
             ),
             InternalBufferAtomicExchange => try_insert(
                 &mut self.internal_buffer_atomic_exchange,
                 (),
                 span,
-                "#[spirv(internal_atomic_exchange)]",
+                "#[spirv(internal_buffer_atomic_exchange)]",
+            ),
+            InternalUintAtomicIAdd => try_insert(
+                &mut self.internal_uint_atomic_i_add,
+                (),
+                span,
+                "#[spirv(internal_uint_atomic_i_add)]",
+            ),
+            InternalUintAtomicOr => try_insert(
+                &mut self.internal_uint_atomic_or,
+                (),
+                span,
+                "#[spirv(internal_uint_atomic_or)]",
+            ),
+            InternalUintAtomicExchange => try_insert(
+                &mut self.internal_uint_atomic_exchange,
+                (),
+                span,
+                "#[spirv(internal_uint_atomic_exchange)]",
             ),
         }
     }
@@ -378,6 +402,9 @@ impl CheckSpirvAttrVisitor<'_> {
                 | SpirvAttribute::InternalBufferAtomicIAdd
                 | SpirvAttribute::InternalBufferAtomicOr
                 | SpirvAttribute::InternalBufferAtomicExchange
+                | SpirvAttribute::InternalUintAtomicIAdd
+                | SpirvAttribute::InternalUintAtomicOr
+                | SpirvAttribute::InternalUintAtomicExchange
                 | SpirvAttribute::UnrollLoops => match target {
                     Target::Fn
                     | Target::Closure

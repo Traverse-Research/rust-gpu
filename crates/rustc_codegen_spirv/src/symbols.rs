@@ -341,13 +341,28 @@ impl Symbols {
             ("internal_buffer_load", SpirvAttribute::InternalBufferLoad),
             ("internal_buffer_store", SpirvAttribute::InternalBufferStore),
             (
-                "internal_atomic_i_add",
+                "internal_buffer_atomic_i_add",
                 SpirvAttribute::InternalBufferAtomicIAdd,
             ),
-            ("internal_atomic_or", SpirvAttribute::InternalBufferAtomicOr),
             (
-                "internal_atomic_exchange",
+                "internal_buffer_atomic_or",
+                SpirvAttribute::InternalBufferAtomicOr,
+            ),
+            (
+                "internal_buffer_atomic_exchange",
                 SpirvAttribute::InternalBufferAtomicExchange,
+            ),
+            (
+                "internal_uint_atomic_i_add",
+                SpirvAttribute::InternalUintAtomicIAdd,
+            ),
+            (
+                "internal_uint_atomic_or",
+                SpirvAttribute::InternalUintAtomicOr,
+            ),
+            (
+                "internal_uint_atomic_exchange",
+                SpirvAttribute::InternalUintAtomicExchange,
             ),
         ]
         .iter()

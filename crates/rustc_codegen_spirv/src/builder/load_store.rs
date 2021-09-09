@@ -215,6 +215,55 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         }
     }
 
+    pub(crate) fn codegen_internal_workgroup_atomic_uint_op(
+        &mut self,
+        result_type: Word,
+        args: &[SpirvValue],
+        op: AtomicOp,
+    ) -> SpirvValue {
+        let op_variable = args[0].def(self);
+        let value = args[1].def(self);
+        dbg!(op_variable);
+
+        let uint_ty = SpirvType::Integer(32, false).def(rustc_span::DUMMY_SP, self);
+        let uint_ptr = SpirvType::Pointer { pointee: uint_ty }.def(rustc_span::DUMMY_SP, self);
+
+        //let op_variable = op_variable.with_type(uniform_uint_ptr);
+
+        let memory = self
+            .constant_u32(self.span(), Scope::Device as u32)
+            .def(self);
+
+        let semantics = self
+            .constant_u32(
+                self.span(),
+                (MemorySemantics::MAKE_VISIBLE
+                    | MemorySemantics::MAKE_AVAILABLE
+                    | MemorySemantics::ACQUIRE_RELEASE
+                    | MemorySemantics::WORKGROUP_MEMORY)
+                    .bits(),
+            )
+            .def(self);
+
+        match op {
+            AtomicOp::Add => self
+                .emit()
+                .atomic_i_add(result_type, None, op_variable, memory, semantics, value)
+                .unwrap()
+                .with_type(uint_ptr),
+            AtomicOp::Or => self
+                .emit()
+                .atomic_or(result_type, None, op_variable, memory, semantics, value)
+                .unwrap()
+                .with_type(uint_ptr),
+            AtomicOp::Exchange => self
+                .emit()
+                .atomic_exchange(result_type, None, op_variable, memory, semantics, value)
+                .unwrap()
+                .with_type(uint_ptr),
+        }
+    }
+
     pub(crate) fn codegen_internal_buffer_atomic_uint_op(
         &mut self,
         result_type: Word,
@@ -234,7 +283,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         let two = self.constant_int(uint_ty, 2).def(self);
 
         let offset_arg = args[1].def(self);
-        let atomic_add_value = args[2].def(self);
+        let value = args[2].def(self);
 
         let element_offset = self
             .emit()
@@ -269,38 +318,17 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         match op {
             AtomicOp::Add => self
                 .emit()
-                .atomic_i_add(
-                    dbg!(result_type),
-                    None,
-                    access_chain,
-                    memory,
-                    semantics,
-                    atomic_add_value,
-                )
+                .atomic_i_add(result_type, None, access_chain, memory, semantics, value)
                 .unwrap()
-                .with_type(dbg!(uniform_uint_ptr)),
+                .with_type(uniform_uint_ptr),
             AtomicOp::Or => self
                 .emit()
-                .atomic_or(
-                    result_type,
-                    None,
-                    access_chain,
-                    memory,
-                    semantics,
-                    atomic_add_value,
-                )
+                .atomic_or(result_type, None, access_chain, memory, semantics, value)
                 .unwrap()
                 .with_type(uniform_uint_ptr),
             AtomicOp::Exchange => self
                 .emit()
-                .atomic_exchange(
-                    result_type,
-                    None,
-                    access_chain,
-                    memory,
-                    semantics,
-                    atomic_add_value,
-                )
+                .atomic_exchange(result_type, None, access_chain, memory, semantics, value)
                 .unwrap()
                 .with_type(uniform_uint_ptr),
         }
