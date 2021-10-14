@@ -339,7 +339,15 @@ impl Symbols {
             ),
             ("unroll_loops", SpirvAttribute::UnrollLoops),
             ("internal_buffer_load", SpirvAttribute::InternalBufferLoad),
+            (
+                "internal_buffer_load_volatile",
+                SpirvAttribute::InternalBufferLoadVolatile,
+            ),
             ("internal_buffer_store", SpirvAttribute::InternalBufferStore),
+            (
+                "internal_buffer_store_volatile",
+                SpirvAttribute::InternalBufferStoreVolatile,
+            ),
             (
                 "internal_buffer_atomic_i_add",
                 SpirvAttribute::InternalBufferAtomicIAdd,

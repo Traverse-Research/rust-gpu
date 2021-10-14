@@ -3,9 +3,27 @@ use crate::builder_spirv::{AtomicOp, SpirvValue, SpirvValueExt};
 use crate::codegen_cx::BindlessDescriptorSets;
 use crate::rustc_codegen_ssa::traits::BuilderMethods;
 use crate::spirv_type::SpirvType;
-use rspirv::spirv::{MemorySemantics, Scope, Word};
+use rspirv::dr::{self, Operand};
+use rspirv::spirv::{MemoryAccess, MemorySemantics, Scope, Word};
 use rustc_target::abi::Align;
 use std::convert::TryInto;
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum LoadMode {
+    Default,
+    MakeVisible,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum StoreMode {
+    Default,
+    MakeAvailable,
+}
+
+struct AccessParams {
+    pub memory_access: Option<MemoryAccess>,
+    pub additional_params: Vec<dr::Operand>,
+}
 
 impl<'a, 'tcx> Builder<'a, 'tcx> {
     // walk down every member in the ADT recursively and load their values as uints
@@ -334,7 +352,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         }
     }
 
-    pub(crate) fn codegen_internal_buffer_store(&mut self, args: &[SpirvValue]) {
+    pub(crate) fn codegen_internal_buffer_store(&mut self, args: &[SpirvValue], mode: StoreMode) {
         if !self.bindless() {
             self.fatal("Need to run the compiler with -Ctarget-feature=+bindless to be able to use the bindless features");
         }
@@ -361,6 +379,22 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         let mut uint_values_and_offsets = vec![];
         self.recurse_adt_for_stores(uint_ty, args[2], 0, &mut uint_values_and_offsets);
 
+        let access_params = match mode {
+            StoreMode::MakeAvailable => {
+                let scope_device = Operand::IdScope(self.constant_int(uint_ty, 1).def(self));
+                AccessParams {
+                    memory_access: Some(
+                        MemoryAccess::NON_PRIVATE_POINTER | MemoryAccess::MAKE_POINTER_AVAILABLE,
+                    ),
+                    additional_params: vec![scope_device],
+                }
+            }
+            _ => AccessParams {
+                memory_access: None,
+                additional_params: vec![],
+            },
+        };
+
         for (offset, uint_value) in uint_values_and_offsets {
             let offset = if offset > 0 {
                 let element_offset = self.constant_int(uint_ty, offset as u64).def(self);
@@ -380,7 +414,25 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                 .unwrap()
                 .with_type(uniform_uint_ptr);
 
-            self.store(uint_value, access_chain, Align::from_bytes(0).unwrap());
+            // ignored self.store because flags and scope and additional params need to be stored
+            // also more consistent with codegen_internal_buffer_load
+            let ptr_elem_ty = match self.lookup_type(access_chain.ty) {
+                SpirvType::Pointer { pointee } => pointee,
+                ty => self.fatal(&format!(
+                    "store called on variable that wasn't a pointer: {:?}",
+                    ty
+                )),
+            };
+            assert_ty_eq!(self, ptr_elem_ty, uint_value.ty);
+
+            self.emit()
+                .store(
+                    access_chain.def(self),
+                    uint_value.def(self),
+                    access_params.memory_access,
+                    access_params.additional_params.clone(),
+                )
+                .unwrap();
         }
     }
 
@@ -388,6 +440,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         &mut self,
         result_type: Word,
         args: &[SpirvValue],
+        mode: LoadMode,
     ) -> SpirvValue {
         if !self.bindless() {
             self.fatal("Need to run the compiler with -Ctarget-feature=+bindless to be able to use the bindless features");
@@ -419,6 +472,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             0,
             result_type,
             &sets,
+            mode,
         )
     }
 
@@ -434,6 +488,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         base_offset_var: Word,
         element_offset_literal: u32,
         sets: &BindlessDescriptorSets,
+        mode: LoadMode,
     ) -> SpirvValue {
         let zero = self.constant_int(uint_ty, 0).def(self);
 
@@ -456,16 +511,44 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
             .access_chain(uniform_uint_ptr, None, sets.buffers, indices)
             .unwrap();
 
+        let access_params = match mode {
+            LoadMode::MakeVisible => {
+                let scope_device = Operand::IdScope(self.constant_int(uint_ty, 1).def(self));
+                AccessParams {
+                    memory_access: Some(
+                        MemoryAccess::NON_PRIVATE_POINTER | MemoryAccess::MAKE_POINTER_VISIBLE,
+                    ),
+                    additional_params: vec![scope_device],
+                }
+            }
+            _ => AccessParams {
+                memory_access: None,
+                additional_params: vec![],
+            },
+        };
+
         match (bits, signed) {
             (32, false) => self
                 .emit()
-                .load(uint_ty, None, result, None, std::iter::empty())
+                .load(
+                    uint_ty,
+                    None,
+                    result,
+                    access_params.memory_access,
+                    access_params.additional_params,
+                )
                 .unwrap()
                 .with_type(uint_ty),
             (32, true) => {
                 let load_res = self
                     .emit()
-                    .load(uint_ty, None, result, None, std::iter::empty())
+                    .load(
+                        uint_ty,
+                        None,
+                        result,
+                        access_params.memory_access,
+                        access_params.additional_params,
+                    )
                     .unwrap();
 
                 self.emit()
@@ -482,7 +565,13 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
 
                 let lower = self
                     .emit()
-                    .load(uint_ty, None, result, None, std::iter::empty())
+                    .load(
+                        uint_ty,
+                        None,
+                        result,
+                        access_params.memory_access,
+                        access_params.additional_params.clone(),
+                    )
                     .unwrap();
 
                 let lower = self.emit().u_convert(ulong_ty, None, lower).unwrap();
@@ -500,7 +589,13 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
 
                 let upper = self
                     .emit()
-                    .load(uint_ty, None, upper_chain, None, std::iter::empty())
+                    .load(
+                        uint_ty,
+                        None,
+                        upper_chain,
+                        access_params.memory_access,
+                        access_params.additional_params,
+                    )
                     .unwrap();
 
                 let upper = self.emit().u_convert(ulong_ty, None, upper).unwrap();
@@ -544,6 +639,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
         element_offset_literal: u32,
         result_type: u32,
         sets: &BindlessDescriptorSets,
+        mode: LoadMode,
     ) -> SpirvValue {
         let data = self.lookup_type(result_type);
 
@@ -585,6 +681,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                             element_offset_literal + offset,
                             *ty,
                             sets,
+                            mode,
                         )
                         .def(self),
                     );
@@ -610,6 +707,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                             element_offset_literal + offset,
                             element,
                             sets,
+                            mode,
                         )
                         .def(self),
                     );
@@ -634,6 +732,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                         base_offset_var,
                         element_offset_literal,
                         sets,
+                        mode,
                     )
                     .def(self);
 
@@ -652,6 +751,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                 base_offset_var,
                 element_offset_literal,
                 sets,
+                mode,
             ),
             SpirvType::Array { element, count } => {
                 let count = self
@@ -674,6 +774,7 @@ impl<'a, 'tcx> Builder<'a, 'tcx> {
                             element_offset_literal + offset,
                             element,
                             sets,
+                            mode,
                         )
                         .def(self),
                     );

@@ -1610,7 +1610,7 @@ dependencies = [
  "num-traits",
  "petgraph",
  "rose_tree",
- "spirv_headers 1.5.0",
+ "spirv_headers",
  "thiserror",
 ]
 
@@ -2168,13 +2168,13 @@ dependencies = [
 
 [[package]]
 name = "rspirv"
-version = "0.8.0"
-source = "git+https://github.com/gfx-rs/rspirv.git?rev=c2a11ba7961fa7c675800f50c1903f0e96c633f8#c2a11ba7961fa7c675800f50c1903f0e96c633f8"
+version = "0.10.0+1.5.4"
+source = "git+https://github.com/hannes-vernooij/rspirv.git?rev=b282a50440a0358db090aeedbcc07fb8d9813485#b282a50440a0358db090aeedbcc07fb8d9813485"
 dependencies = [
  "derive_more",
  "fxhash",
  "num-traits",
- "spirv_headers 1.5.1",
+ "spirv",
 ]
 
 [[package]]
@@ -2411,6 +2411,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "spirv"
+version = "0.2.0+1.5.4"
+source = "git+https://github.com/hannes-vernooij/rspirv.git?rev=b282a50440a0358db090aeedbcc07fb8d9813485#b282a50440a0358db090aeedbcc07fb8d9813485"
+dependencies = [
+ "bitflags",
+ "num-traits",
+]
+
+[[package]]
 name = "spirv-builder"
 version = "0.4.0-alpha.11"
 dependencies = [
@@ -2484,15 +2493,6 @@ name = "spirv_headers"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f5b132530b1ac069df335577e3581765995cba5a13995cdbbdbc8fb057c532c"
-dependencies = [
- "bitflags",
- "num-traits",
-]
-
-[[package]]
-name = "spirv_headers"
-version = "1.5.1"
-source = "git+https://github.com/gfx-rs/rspirv.git?rev=c2a11ba7961fa7c675800f50c1903f0e96c633f8#c2a11ba7961fa7c675800f50c1903f0e96c633f8"
 dependencies = [
  "bitflags",
  "num-traits",

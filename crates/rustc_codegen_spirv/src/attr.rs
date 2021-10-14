@@ -90,7 +90,9 @@ pub enum SpirvAttribute {
     // `fn`/closure attributes:
     UnrollLoops,
     InternalBufferLoad,
+    InternalBufferLoadVolatile,
     InternalBufferStore,
+    InternalBufferStoreVolatile,
     InternalBufferAtomicIAdd,
     InternalBufferAtomicOr,
     InternalBufferAtomicExchange,
@@ -131,7 +133,9 @@ pub struct AggregatedSpirvAttributes {
     // `fn`/closure attributes:
     pub unroll_loops: Option<Spanned<()>>,
     pub internal_buffer_load: Option<Spanned<()>>,
+    pub internal_buffer_load_volatile: Option<Spanned<()>>,
     pub internal_buffer_store: Option<Spanned<()>>,
+    pub internal_buffer_store_volatile: Option<Spanned<()>>,
     pub internal_buffer_atomic_i_add: Option<Spanned<()>>,
     pub internal_buffer_atomic_or: Option<Spanned<()>>,
     pub internal_buffer_atomic_exchange: Option<Spanned<()>>,
@@ -231,11 +235,23 @@ impl AggregatedSpirvAttributes {
                 span,
                 "#[spirv(internal_buffer_load)]",
             ),
+            InternalBufferLoadVolatile => try_insert(
+                &mut self.internal_buffer_load_volatile,
+                (),
+                span,
+                "#[spirv(internal_buffer_load_volatile)]",
+            ),
             InternalBufferStore => try_insert(
                 &mut self.internal_buffer_store,
                 (),
                 span,
                 "#[spirv(internal_buffer_store)]",
+            ),
+            InternalBufferStoreVolatile => try_insert(
+                &mut self.internal_buffer_store_volatile,
+                (),
+                span,
+                "#[spirv(internal_buffer_store_volatile)]",
             ),
             InternalBufferAtomicIAdd => try_insert(
                 &mut self.internal_buffer_atomic_i_add,
@@ -398,7 +414,9 @@ impl CheckSpirvAttrVisitor<'_> {
                     _ => Err(Expected("function parameter")),
                 },
                 SpirvAttribute::InternalBufferLoad
+                | SpirvAttribute::InternalBufferLoadVolatile
                 | SpirvAttribute::InternalBufferStore
+                | SpirvAttribute::InternalBufferStoreVolatile
                 | SpirvAttribute::InternalBufferAtomicIAdd
                 | SpirvAttribute::InternalBufferAtomicOr
                 | SpirvAttribute::InternalBufferAtomicExchange

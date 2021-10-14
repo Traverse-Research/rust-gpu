@@ -2187,9 +2187,41 @@ impl<'a, 'tcx> BuilderMethods<'a, 'tcx> for Builder<'a, 'tcx> {
             self.abort();
             self.undef(result_type)
         } else if self.internal_buffer_load_id.borrow().contains(&callee_val) {
-            self.codegen_internal_buffer_load(result_type, args)
+            self.codegen_internal_buffer_load(
+                result_type,
+                args,
+                crate::builder::load_store::LoadMode::Default,
+            )
+        } else if self
+            .internal_buffer_load_volatile_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_buffer_load(
+                result_type,
+                args,
+                crate::builder::load_store::LoadMode::MakeVisible,
+            )
         } else if self.internal_buffer_store_id.borrow().contains(&callee_val) {
-            self.codegen_internal_buffer_store(args);
+            self.codegen_internal_buffer_store(
+                args,
+                crate::builder::load_store::StoreMode::Default,
+            );
+
+            let void_ty = SpirvType::Void.def(rustc_span::DUMMY_SP, self);
+            SpirvValue {
+                kind: SpirvValueKind::IllegalTypeUsed(void_ty),
+                ty: void_ty,
+            }
+        } else if self
+            .internal_buffer_store_volatile_id
+            .borrow()
+            .contains(&callee_val)
+        {
+            self.codegen_internal_buffer_store(
+                args,
+                crate::builder::load_store::StoreMode::MakeAvailable,
+            );
 
             let void_ty = SpirvType::Void.def(rustc_span::DUMMY_SP, self);
             SpirvValue {

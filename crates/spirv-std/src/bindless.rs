@@ -113,6 +113,12 @@ mod internal {
         unimplemented!()
     } // actually implemented in the compiler
 
+    #[spirv(internal_buffer_load_volatile)]
+    #[spirv_std_macros::gpu_only]
+    pub extern "unadjusted" fn internal_buffer_load_volatile<T>(_buffer: u32, _offset: u32) -> T {
+        unimplemented!()
+    } // actually implemented in the compiler
+
     #[spirv(internal_buffer_atomic_i_add)]
     #[spirv_std_macros::gpu_only]
     pub extern "unadjusted" fn internal_buffer_atomic_add(
@@ -146,6 +152,16 @@ mod internal {
     #[spirv(internal_buffer_store)]
     #[spirv_std_macros::gpu_only]
     pub unsafe extern "unadjusted" fn internal_buffer_store<T>(
+        _buffer: u32,
+        _offset: u32,
+        _value: T,
+    ) {
+        unimplemented!()
+    } // actually implemented in the compiler
+
+    #[spirv(internal_buffer_store_volatile)]
+    #[spirv_std_macros::gpu_only]
+    pub unsafe extern "unadjusted" fn internal_buffer_store_volatile<T>(
         _buffer: u32,
         _offset: u32,
         _value: T,
@@ -212,11 +228,36 @@ impl Buffer {
     }
 
     #[spirv_std_macros::gpu_only]
+    #[inline]
+    pub extern "unadjusted" fn load_volatile<T>(self, dword_aligned_byte_offset: u32) -> T {
+        // jb-todo: figure out why this assert breaks with complaints about pointers
+        // assert!(self.0.tag() == RenderResourceTag::Buffer);
+        // assert!(std::mem::sizeof::<T>() % 4 == 0);
+        // assert!(dword_aligned_byte_offset % 4 == 0);
+
+        unsafe {
+            internal::internal_buffer_load_volatile(self.0.index(), dword_aligned_byte_offset)
+        }
+    }
+
+    #[spirv_std_macros::gpu_only]
     pub unsafe extern "unadjusted" fn store<T>(self, dword_aligned_byte_offset: u32, value: T) {
         // jb-todo: figure out why this assert breaks with complaints about pointers
         // assert!(self.0.tag() == RenderResourceTag::Buffer);
 
         internal::internal_buffer_store(self.0.index(), dword_aligned_byte_offset, value)
+    }
+
+    #[spirv_std_macros::gpu_only]
+    pub unsafe extern "unadjusted" fn store_volatile<T>(
+        self,
+        dword_aligned_byte_offset: u32,
+        value: T,
+    ) {
+        // jb-todo: figure out why this assert breaks with complaints about pointers
+        // assert!(self.0.tag() == RenderResourceTag::Buffer);
+
+        internal::internal_buffer_store_volatile(self.0.index(), dword_aligned_byte_offset, value)
     }
 
     #[spirv_std_macros::gpu_only]

@@ -124,8 +124,18 @@ impl<'tcx> CodegenCx<'tcx> {
         if attrs.internal_buffer_load.is_some() {
             self.internal_buffer_load_id.borrow_mut().insert(fn_id);
         }
+        if attrs.internal_buffer_load_volatile.is_some() {
+            self.internal_buffer_load_volatile_id
+                .borrow_mut()
+                .insert(fn_id);
+        }
         if attrs.internal_buffer_store.is_some() {
             self.internal_buffer_store_id.borrow_mut().insert(fn_id);
+        }
+        if attrs.internal_buffer_store.is_some() {
+            self.internal_buffer_store_volatile_id
+                .borrow_mut()
+                .insert(fn_id);
         }
         if attrs.internal_buffer_atomic_i_add.is_some() {
             self.internal_buffer_atomic_i_add_id
