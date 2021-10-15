@@ -132,7 +132,7 @@ impl<'tcx> CodegenCx<'tcx> {
         if attrs.internal_buffer_store.is_some() {
             self.internal_buffer_store_id.borrow_mut().insert(fn_id);
         }
-        if attrs.internal_buffer_store.is_some() {
+        if attrs.internal_buffer_store_volatile.is_some() {
             self.internal_buffer_store_volatile_id
                 .borrow_mut()
                 .insert(fn_id);
