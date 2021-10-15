@@ -331,7 +331,7 @@ pub fn instruction_signatures(op: Op) -> Option<&'static [InstSig<'static>]> {
         },
         Op::ImageTexelPointer => sig! { (Pointer(_, Image(T)), _, _) -> Pointer(_, T) },
         Op::Load => sig! { (Pointer(_, T), ..) -> T },
-        Op::Store => sig! { (Pointer(_, T), T) },
+        Op::Store => sig! { (Pointer(_, T), ..) },
         Op::CopyMemory => sig! { (Pointer(_, T), Pointer(_, T)) },
         Op::CopyMemorySized => {}
         Op::AccessChain | Op::InBoundsAccessChain => sig! {
