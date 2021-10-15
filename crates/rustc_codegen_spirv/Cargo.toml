@@ -37,7 +37,7 @@ syn = { version = "1", features = ["visit", "visit-mut"] }
 # Normal dependencies.
 bimap = "0.6"
 indexmap = "1.6.0"
-rspirv = {git = "https://github.com/hannes-vernooij/rspirv.git", rev = "b282a50440a0358db090aeedbcc07fb8d9813485"} #{ git = "https://github.com/gfx-rs/rspirv.git", rev = "c2a11ba7961fa7c675800f50c1903f0e96c633f8" }
+rspirv = { git = "https://github.com/gfx-rs/rspirv.git", rev = "98c2190cc6019335ed3c0e626c7a8061392033b2" }
 rustc-demangle = "0.1.18"
 sanitize-filename = "0.3"
 serde = { version = "1.0", features = ["derive"] }
