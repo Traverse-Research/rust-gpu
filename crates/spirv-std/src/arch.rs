@@ -11,12 +11,14 @@ use crate::{
 #[cfg(target_arch = "spirv")]
 use core::arch::asm;
 
+pub mod atomics;
 mod barrier;
 mod demote_to_helper_invocation_ext;
 mod derivative;
 mod primitive;
 mod ray_tracing;
 
+pub use atomics::*;
 pub use barrier::*;
 pub use demote_to_helper_invocation_ext::*;
 pub use derivative::*;
